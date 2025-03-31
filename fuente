@@ -1,0 +1,80 @@
+# Required Libraries:
+# - opencv-python: To capture video and process frames.
+#
+# To install the necessary library, you can run the following commands:
+# For Linux/macOS:
+# pip install opencv-python
+#
+# For Windows:
+# python -m pip install opencv-python
+#
+# Note: Make sure Python is installed on your system before running the script.
+
+import cv2
+import numpy as np
+
+# Initialize the webcam (0 is the default camera)
+cap = cv2.VideoCapture(0)
+
+# Variables for motion detection
+prev_frame = None
+motion_detected = False
+
+while True:
+    # Capture frame-by-frame
+    ret, frame = cap.read()
+
+    # Convert the frame to grayscale
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # Blur the image to reduce noise and improve detection
+    gray = cv2.GaussianBlur(gray, (21, 21), 0)
+
+    # Initialize the previous frame
+    if prev_frame is None:
+        prev_frame = gray
+        continue
+
+    # Compute the absolute difference between the current frame and the previous frame
+    frame_delta = cv2.absdiff(prev_frame, gray)
+
+    # Threshold the delta to highlight areas with significant changes (motion)
+    thresh = cv2.threshold(frame_delta, 25, 255, cv2.THRESH_BINARY)[1]
+
+    # Dilate the thresholded image to fill in holes
+    thresh = cv2.dilate(thresh, None, iterations=2)
+
+    # Find contours (areas of movement)
+    contours, _ = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Loop through contours to detect motion
+    motion_detected = False
+    for contour in contours:
+        if cv2.contourArea(contour) < 500:  # Ignore small contours (noise)
+            continue
+
+        # Draw a bounding box around the detected motion
+        (x, y, w, h) = cv2.boundingRect(contour)
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+        motion_detected = True
+
+    # Display the frame with the bounding box if motion is detected
+    cv2.putText(frame, "Motion Detected" if motion_detected else "No Motion", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255) if motion_detected else (0, 255, 0), 2)
+
+    # Show the resulting frame
+    cv2.imshow("Motion Detection", frame)
+
+    # Set the current frame as the previous frame for the next iteration
+    prev_frame = gray
+
+    # Break the loop if the 'q' key is pressed
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# Release the capture and close all OpenCV windows
+cap.release()
+cv2.destroyAllWindows()
+
+# End message
+print("\nThank you for using this script!\n\nBest regards,\nLewenn\n\nFeel free to follow me on GitHub: https://github.com/lewennpy")
